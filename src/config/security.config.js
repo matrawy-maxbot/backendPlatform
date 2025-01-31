@@ -10,10 +10,6 @@ const securitySchema = object({
   CORS_ORIGIN: string().required(),
   CORS_METHODS: string().default('GET,POST,PUT,DELETE'),
   CORS_HEADERS: string().default('Content-Type,Authorization'),
-
-  // Rate Limiting
-  RATE_LIMIT_MAX_REQUESTS: number().integer().min(1).default(100),
-  RATE_LIMIT_WINDOW_MS: number().integer().min(1).default(60000),
 }).unknown();
 
 const { value: securityConfig, error } = securitySchema.validate(process.env, {
@@ -32,6 +28,4 @@ export const {
   CORS_ORIGIN,
   CORS_METHODS,
   CORS_HEADERS,
-  RATE_LIMIT_MAX_REQUESTS,
-  RATE_LIMIT_WINDOW_MS,
 } = securityConfig;
