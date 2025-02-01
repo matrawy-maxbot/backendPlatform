@@ -9,4 +9,4 @@ const comparePassword = async (password, hash) => {
     return await compare(password, hash);
 };
 
-export default { hashPassword, comparePassword };
+export { hashPassword, comparePassword };
