@@ -1,4 +1,4 @@
-import { object, string, number } from 'joi';
+import { object, string } from 'joi';
 
 // تعريف Schema للتحقق من الإعدادات
 const securitySchema = object({
