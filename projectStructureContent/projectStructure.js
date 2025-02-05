@@ -11,6 +11,7 @@ function printDirectoryTree(dir, prefix = '') {
 
   // نطبع الفولدرات أولاً
   folders.forEach((folder, index) => {
+    if (folder === 'node_modules') return; // نتجاهل فولدر node_modules عشان ميتعبناش
     const isLastFolder = index === folders.length - 1 && filesOnly.length === 0;
     console.log(prefix + (isLastFolder ? '└── ' : '├── ') + folder);
 
@@ -25,4 +26,4 @@ function printDirectoryTree(dir, prefix = '') {
   });
 }
 
-printDirectoryTree('./src');
+printDirectoryTree('../');

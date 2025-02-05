@@ -16,14 +16,16 @@ function printFilesContentToFile(rootDir, outputFilePath) {
 
       if (stat.isDirectory()) {
         // لو ده فولدر، ندخل فيه ونكمل القراية
-        readDirectory(filePath);
+        if (file !== 'node_modules') { // نتجاهل فولدر node_modules عشان ميتعبناش
+          readDirectory(filePath);
+        }
       } else {
         // لو ده ملف، نقرا المحتوى بتاعه
         const content = readFileSync(filePath, 'utf8').trim(); // نقرا المحتوى ونشيل المسافات الفاضية
 
         // لو الملف مش فاضي، نكتب مساره ومحتواه في ملف الناتج
         if (content) {
-            outputStream.write(`File: ${filePath}\n`);
+            outputStream.write(`File: ${filePath.replace(/(\.\.\/|\.\.\\)/g, '')}\n`);
             outputStream.write('Content:\n');
             outputStream.write(content);
             outputStream.write('\n\n||------------------------------------------------------||\n\n'); // فاصل بين الملفات
@@ -41,6 +43,6 @@ function printFilesContentToFile(rootDir, outputFilePath) {
 }
 
 // نستخدم الدالة
-const projectPath = './src'; // المسار بتاع مشروعك
-const outputFile = 'projectFilesContent.txt'; // اسم الملف اللي هيتم إنشاءه
+const projectPath = '../'; // المسار بتاع مشروعك
+const outputFile = 'projectFilesContent2.txt'; // اسم الملف اللي هيتم إنشاءه
 printFilesContentToFile(projectPath, outputFile);
