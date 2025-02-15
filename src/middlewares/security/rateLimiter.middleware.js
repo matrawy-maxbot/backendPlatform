@@ -1,4 +1,4 @@
-import { RateLimiterMemory } from 'rate-limit-flexible';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
 import status from '../../config/status.config.js';
 
 // إعداد الـ Rate Limiter العام لكل المستخدمين
