@@ -1,4 +1,5 @@
 import { RateLimiterMemory } from 'rate-limit-flexible';
+import status from '../../config/status.config.js';
 
 // إعداد الـ Rate Limiter العام لكل المستخدمين
 const generalLimiter = new RateLimiterMemory({
@@ -19,7 +20,7 @@ const rateLimiterMiddleware = (req, res, next) => {
             next(); // كمل الطلب عادي
         })
         .catch(() => {
-            res.status(429);
+            res.status(status.TOO_MANY_REQUESTS);
             next(new Error('Too many requests, please try again later.'));
         });
 };
@@ -31,7 +32,7 @@ const loginRateLimiter = (req, res, next) => {
             next();
         })
         .catch(() => {
-          res.status(429);
+          res.status(status.TOO_MANY_REQUESTS);
           next(new Error('Too many login attempts, please try again later.'));
         });
 };

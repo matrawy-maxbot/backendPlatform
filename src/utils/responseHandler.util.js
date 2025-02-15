@@ -1,5 +1,6 @@
 const successResponse = (res, data, message = 'success', status = 200) => {
-    return res.status(status).json({ success: true, message, data });
+    res.status(status).write(Object.keys(data).length > 0 ? JSON.stringify({ success: true, message, data }) : JSON.stringify({ success: true, message }));
+    return res.end();
 };
 
-export default { successResponse };
+export default successResponse;

@@ -1,18 +1,15 @@
-import { NODE_ENV } from '../../config/server.config.js';
+// file : errorHandler.middleware.js
 
-const errorHandlerMiddleware = (err, req, res, next) => {
-    const statusCode = res.statusCode !== 200 ? res.statusCode : 500;
+import { NODE_ENV } from '../../config/server.config.js';
+import { handleError } from '../../utils/errors/errorsAPIHandler.util.js';
+import status from '../../config/status.config.js';
+
+const errorHandlerMiddleware = async (err, req, res) => {
+    const statusCode = err.status || (res.statusCode >= status.BAD_REQUEST ? res.statusCode : status.INTERNAL_SERVER_ERROR);
     const message = NODE_ENV === 'production' ? 'Something went wrong' : err.message;
     const stack = NODE_ENV === 'production' ? null : err.stack;
-    const messageBody = {
-        success: false,
-        error: {message, stack}
-    };
-  
-    console.error(`[Error] ${statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`, err.stack);
     
-    res.status(statusCode).json(messageBody);
-  };
+    await handleError({ status: statusCode, message, response: res, req, stack });
+};
   
-  export default errorHandlerMiddleware;
-  
+export default errorHandlerMiddleware;

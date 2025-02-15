@@ -13,7 +13,11 @@ const wsAuthMiddleware = (socket, next) => {
     socket.user = decoded;
     next();
   } catch (err) {
-    next(new Error('Unauthorized: Invalid token'));
+    if (err.name === 'TokenExpiredError') {
+      return next(new Error('Unauthorized: Token expired'));
+    } else {
+      return next(new Error('Unauthorized: Invalid token'));
+    }
   }
 };
 

@@ -10,12 +10,8 @@ const transporter = createTransport({
 });
 
 const sendEmail = async (to, subject, text) => {
-    try {
-        await transporter.sendMail({ from: EMAIL_USER, to, subject, text });
-        return true;
-    } catch (error) {
-        throw error;
-    }
+    await transporter.sendMail({ from: EMAIL_USER, to, subject, text });
+    return true;
 };
 
 export default { sendEmail };

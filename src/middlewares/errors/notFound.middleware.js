@@ -1,6 +1,8 @@
+import status from '../../config/status.config.js';
+
 const notFoundMiddleware = (req, res, next) => {
-    res.status(404);
-    next(new Error(`404 Not Found - ${req.originalUrl}`));
+    res.status(status.NOT_FOUND);
+    next(new Error(`${status.NOT_FOUND} Not Found - ${req.originalUrl}`));
   };
   
   export default notFoundMiddleware;

@@ -8,36 +8,46 @@ import crypto from 'crypto';
 class FileHandler {
   constructor(filePath, createIfNotExist = false) {
     this.filePath = filePath;
+    this.folderPath = path.dirname(filePath);
     this.createIfNotExist = createIfNotExist;
 
-    // Ensure file existence if required
-    if (this.createIfNotExist && !fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, ''); // Create an empty file if it doesn't exist
+    if (this.createIfNotExist) {
+      this.ensureFileOrFolderExists(filePath).catch((error) => {
+        console.error(`Error creating file or folder: ${error.message}`);
+      });
+    }
+  }
+
+  // Ensure a file or folder exists
+  async ensureFileOrFolderExists(filePath) {
+    if (!fs.existsSync(filePath)) {
+      const ext = path.extname(filePath);
+      if (ext) {
+        await fs.promises.writeFile(filePath, '', { flag: 'wx' }).catch((error) => {
+          if (error.code !== 'EEXIST') throw error;
+        });
+      } else {
+        await fs.promises.mkdir(filePath, { recursive: true });
+      }
     }
   }
 
   // Upload a file to a destination folder
   async uploadFile(file, destination = './uploads') {
-    try {
-      await this.createFolder(destination);
-      const filePath = path.join(destination, file.originalname);
-      await fs.promises.writeFile(filePath, file.buffer);
-      return filePath;
-    } catch (error) {
-      console.error('Error uploading file:', error.message);
-      throw error;
+    if (!file || !file.buffer) {
+      throw new Error('Invalid file object');
     }
+
+    await this.ensureFolderExists(destination);
+    const filePath = path.join(destination, file.originalname);
+    await fs.promises.writeFile(filePath, file.buffer);
+    return filePath;
   }
 
   // Delete the file
   async deleteFile() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        await fs.promises.unlink(this.filePath);
-      }
-    } catch (error) {
-      console.error('Error deleting file:', error.message);
-      throw error;
+    if (fs.existsSync(this.filePath)) {
+      await fs.promises.unlink(this.filePath);
     }
   }
 
@@ -48,52 +58,34 @@ class FileHandler {
 
   // Move a file to a new destination
   async moveFile(destinationPath) {
-    try {
-      await fs.promises.rename(this.filePath, destinationPath);
-    } catch (error) {
-      console.error('Error moving file:', error.message);
-      throw error;
-    }
+    await this.ensureFolderExists(path.dirname(destinationPath));
+    await fs.promises.rename(this.filePath, destinationPath);
   }
 
   // Rename the file
   async renameFile(newName) {
-    try {
-      const newPath = path.join(path.dirname(this.filePath), newName);
-      await fs.promises.rename(this.filePath, newPath);
-      return newPath;
-    } catch (error) {
-      console.error('Error renaming file:', error.message);
-      throw error;
-    }
+    const newPath = path.join(path.dirname(this.filePath), newName);
+    await fs.promises.rename(this.filePath, newPath);
+    this.filePath = newPath; // Update the file path
+    return newPath;
   }
 
   // Get file information
   getFileInfo() {
-    try {
-      const stats = fs.statSync(this.filePath);
-      return {
-        name: path.basename(this.filePath),
-        size: stats.size,
-        type: path.extname(this.filePath),
-        createdAt: stats.birthtime,
-        updatedAt: stats.mtime,
-      };
-    } catch (error) {
-      console.error('Error fetching file info:', error.message);
-      throw error;
-    }
+    const stats = fs.statSync(this.filePath);
+    return {
+      name: path.basename(this.filePath),
+      size: stats.size,
+      type: path.extname(this.filePath),
+      createdAt: stats.birthtime,
+      updatedAt: stats.mtime,
+    };
   }
 
   // Create a folder if it doesn't exist
-  async createFolder(folderPath) {
-    try {
-      if (!fs.existsSync(folderPath)) {
-        await fs.promises.mkdir(folderPath, { recursive: true });
-      }
-    } catch (error) {
-      console.error('Error creating folder:', error.message);
-      throw error;
+  async ensureFolderExists(folderPath) {
+    if (!fs.existsSync(folderPath)) {
+      await fs.promises.mkdir(folderPath, { recursive: true });
     }
   }
 
@@ -104,121 +96,126 @@ class FileHandler {
 
   // Read contents of a folder
   async readFolder(folderPath) {
-    try {
-      return await fs.promises.readdir(folderPath);
-    } catch (error) {
-      console.error('Error reading folder:', error.message);
-      throw error;
-    }
+    return await fs.promises.readdir(folderPath);
   }
 
   // Delete a folder and its contents
   async deleteFolder(folderPath) {
-    try {
-      if (fs.existsSync(folderPath)) {
-        await fs.promises.rm(folderPath, { recursive: true });
-      }
-    } catch (error) {
-      console.error('Error deleting folder:', error.message);
-      throw error;
+    if (fs.existsSync(folderPath)) {
+      await fs.promises.rm(folderPath, { recursive: true });
     }
   }
 
   // Resize an image
   async resizeImage(width, height) {
-    try {
-      const buffer = fs.readFileSync(this.filePath);
-      const resizedBuffer = await sharp(buffer).resize(width, height).toBuffer();
-      fs.writeFileSync(this.filePath, resizedBuffer);
-    } catch (error) {
-      console.error('Error resizing image:', error.message);
-      throw error;
+    if (typeof width !== 'number' || typeof height !== 'number') {
+      throw new Error('Width and height must be numbers');
     }
+
+    const buffer = await fs.promises.readFile(this.filePath);
+    const resizedBuffer = await sharp(buffer).resize(width, height).toBuffer();
+    await fs.promises.writeFile(this.filePath, resizedBuffer);
   }
 
   // Convert image format
   async convertImageFormat(format) {
-    try {
-      const buffer = fs.readFileSync(this.filePath);
-      const convertedBuffer = await sharp(buffer).toFormat(format).toBuffer();
-      fs.writeFileSync(this.filePath, convertedBuffer);
-    } catch (error) {
-      console.error('Error converting image format:', error.message);
-      throw error;
+    const supportedFormats = ['jpeg', 'png', 'webp', 'avif'];
+    if (!supportedFormats.includes(format)) {
+      throw new Error(`Unsupported format: ${format}`);
     }
+
+    const buffer = await fs.promises.readFile(this.filePath);
+    const convertedBuffer = await sharp(buffer).toFormat(format).toBuffer();
+    await fs.promises.writeFile(this.filePath, convertedBuffer);
   }
 
   // Compress an image
   async compressImage(quality = 80) {
-    try {
-      const buffer = fs.readFileSync(this.filePath);
-      const compressedBuffer = await sharp(buffer).jpeg({ quality }).toBuffer();
-      fs.writeFileSync(this.filePath, compressedBuffer);
-    } catch (error) {
-      console.error('Error compressing image:', error.message);
-      throw error;
+    if (typeof quality !== 'number' || quality < 1 || quality > 100) {
+      throw new Error('Quality must be a number between 1 and 100');
     }
+
+    const buffer = await fs.promises.readFile(this.filePath);
+    const compressedBuffer = await sharp(buffer).jpeg({ quality }).toBuffer();
+    await fs.promises.writeFile(this.filePath, compressedBuffer);
   }
 
   // Compress multiple files into a ZIP archive
   async compressFiles(files, outputPath) {
     return new Promise((resolve, reject) => {
-      try {
-        const output = fs.createWriteStream(outputPath);
-        const archive = archiver('zip');
+      const output = fs.createWriteStream(outputPath);
+      const archive = archiver('zip', { zlib: { level: 9 } });
 
-        output.on('close', () => resolve(outputPath));
-        archive.on('error', (err) => reject(err));
+      output.on('close', () => resolve(outputPath));
+      archive.on('error', (err) => reject(err));
 
-        archive.pipe(output);
-        files.forEach((file) => {
-          archive.file(file.path, { name: file.originalname });
-        });
-        archive.finalize();
-      } catch (error) {
-        console.error('Error compressing files:', error.message);
-        reject(error);
-      }
+      archive.pipe(output);
+      files.forEach((file) => {
+        archive.file(file.path, { name: file.originalname });
+      });
+      archive.finalize();
     });
   }
 
   // Scan a file for malware
   async scanFile() {
     return new Promise((resolve, reject) => {
-      exec(`clamscan ${this.filePath}`, (error, stdout) => {
+      exec('which clamscan', (error) => {
         if (error) {
-          reject(new Error('File is infected or corrupted.'));
-        } else {
-          resolve(stdout.includes('Infected files: 0') ? 'File is safe.' : 'File is infected.');
+          reject(new Error('clamscan is not installed.'));
+          return;
         }
+
+        exec(`clamscan ${this.filePath}`, (error, stdout) => {
+          if (error) {
+            reject(new Error('File is infected or corrupted.'));
+          } else {
+            resolve(stdout.includes('Infected files: 0') ? 'File is safe.' : 'File is infected.');
+          }
+        });
       });
     });
   }
 
   // Encrypt a file
   async encryptFile(secretKey) {
-    try {
-      const buffer = fs.readFileSync(this.filePath);
-      const cipher = crypto.createCipheriv('aes-256-cbc', secretKey, secretKey.slice(0, 16));
-      const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
-      fs.writeFileSync(this.filePath, encrypted);
-    } catch (error) {
-      console.error('Error encrypting file:', error.message);
-      throw error;
+    if (!secretKey || secretKey.length < 32) {
+      throw new Error('Secret key must be at least 32 characters long');
     }
+
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', secretKey, iv);
+    const input = fs.createReadStream(this.filePath);
+    const output = fs.createWriteStream(`${this.filePath}.enc`);
+
+    input.pipe(cipher).pipe(output);
+
+    await new Promise((resolve, reject) => {
+      output.on('finish', () => {
+        fs.writeFileSync(`${this.filePath}.iv`, iv); // Save IV for decryption
+        resolve();
+      });
+      output.on('error', reject);
+    });
   }
 
   // Decrypt a file
   async decryptFile(secretKey) {
-    try {
-      const encryptedBuffer = fs.readFileSync(this.filePath);
-      const decipher = crypto.createDecipheriv('aes-256-cbc', secretKey, secretKey.slice(0, 16));
-      const decrypted = Buffer.concat([decipher.update(encryptedBuffer), decipher.final()]);
-      fs.writeFileSync(this.filePath, decrypted);
-    } catch (error) {
-      console.error('Error decrypting file:', error.message);
-      throw error;
+    if (!secretKey || secretKey.length < 32) {
+      throw new Error('Secret key must be at least 32 characters long');
     }
+
+    const iv = fs.readFileSync(`${this.filePath}.iv`);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', secretKey, iv);
+    const input = fs.createReadStream(this.filePath);
+    const output = fs.createWriteStream(this.filePath.replace('.enc', ''));
+
+    input.pipe(decipher).pipe(output);
+
+    await new Promise((resolve, reject) => {
+      output.on('finish', resolve);
+      output.on('error', reject);
+    });
   }
 }
 

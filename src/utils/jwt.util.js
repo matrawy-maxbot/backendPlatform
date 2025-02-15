@@ -8,7 +8,7 @@ const generateToken = (payload, expiresIn = '1h') => {
 const verifyToken = (token) => {
     try {
         return verify(token, JWT_SECRET);
-    } catch (error) {
+    } catch {
         return null;
     }
 };

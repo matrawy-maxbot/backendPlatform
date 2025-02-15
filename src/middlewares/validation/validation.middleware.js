@@ -1,8 +1,10 @@
+import status from '../../config/status.config.js';
+
 const validationMiddleware = (schema) => (req, res, next) => {
     const { error, value } = schema.validate(req.body, { abortEarly: false });
   
     if (error) {
-        res.status(400);
+        res.status(status.BAD_REQUEST);
         return next(new Error(error.details.map((err) => err.message).join(', ')));
     }
 
