@@ -1,6 +1,10 @@
 import { User } from '../models/index.js';
 
 class userRepository {
+  constructor() {
+    this.Model = User;
+  }
+  
   async create(userData) {
     return await User.create(userData);
   }
